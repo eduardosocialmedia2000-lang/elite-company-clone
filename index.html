@@ -93,10 +93,10 @@ section#offer .rounded-xl:hover > svg:first-of-type{transform:scale(1.2) transla
 .text-3xl.font-bold,.text-4xl.font-bold{transition:transform .5s}
 .text-3xl.font-bold.in-view,.text-4xl.font-bold.in-view{animation:word-in .8s cubic-bezier(.16,1,.3,1) both}
 
-/* ======== HERO IMAGE TILT ======== */
-main > section:first-child .rounded-2xl{transform:perspective(1200px) rotateX(var(--tx,0deg)) rotateY(var(--ty,0deg));transition:transform .4s cubic-bezier(.2,.8,.2,1);animation:float-slow 9s ease-in-out infinite}
-main > section:first-child .rounded-2xl img{transition:transform .6s cubic-bezier(.2,.8,.2,1)}
-main > section:first-child .rounded-2xl:hover img{transform:scale(1.03)}
+/* ======== HERO IMAGE (defensive: always render on mobile/low-end GPUs) ======== */
+main > section:first-of-type img{display:block;width:100%;max-width:100%;height:auto;opacity:1 !important;visibility:visible !important}
+main > section:first-of-type .rounded-2xl{transform:none !important;animation:none !important}
+main > section:first-of-type .rounded-2xl:hover img{transform:scale(1.02);transition:transform .6s cubic-bezier(.2,.8,.2,1)}
 
 /* ======== GUARANTEE shield pulse ======== */
 .rounded-full[style*="gradient-gold"]{animation:ring-expand 2.6s ease-out infinite}
@@ -206,7 +206,10 @@ footer div:first-child:hover .lucide-chess-knight{transform:rotate(360deg)}
     'footer > div > div > div'
   ];
   var els = document.querySelectorAll(revealSelectors.join(','));
+  var heroSection0 = document.querySelector('main > section:first-of-type');
   els.forEach(function(el, i){
+    /* Skip elements that contain the hero image — we never want to hide the dashboard */
+    if (el.querySelector && el.querySelector('img') && heroSection0 && heroSection0.contains(el)) return;
     el.classList.add('reveal');
     var mod = i % 4;
     if (mod) el.classList.add('d' + mod);
@@ -225,6 +228,14 @@ footer div:first-child:hover .lucide-chess-knight{transform:rotate(360deg)}
     });
   }, { threshold: 0.08, rootMargin: '0px 0px -40px 0px' });
   document.querySelectorAll('.reveal').forEach(function(el){ io.observe(el); });
+
+  /* Safety net: if any .reveal is still hidden after 4s (e.g. rapid scroll, browser
+     quirk, or IO fails silently), force-reveal so content never disappears. */
+  setTimeout(function(){
+    document.querySelectorAll('.reveal:not(.in)').forEach(function(el){
+      el.classList.add('in');
+    });
+  }, 4000);
 
   /* --- Stat counter animation --- */
   var stats = document.querySelectorAll('.text-3xl.font-bold, .text-4xl.font-bold');
@@ -285,26 +296,6 @@ footer div:first-child:hover .lucide-chess-knight{transform:rotate(360deg)}
       var y = ((ev.clientY - r.top) / r.height) * 100;
       heroSection.style.setProperty('--mx', x + '%');
       heroSection.style.setProperty('--my', y + '%');
-    });
-  }
-
-  /* --- Hero image 3D tilt follows cursor --- */
-  var heroImgWrap = document.querySelector('main > section:first-of-type .rounded-2xl');
-  if (heroImgWrap) {
-    var rafId = null;
-    heroImgWrap.addEventListener('mousemove', function(ev){
-      var r = heroImgWrap.getBoundingClientRect();
-      var cx = (ev.clientX - r.left) / r.width - 0.5;
-      var cy = (ev.clientY - r.top) / r.height - 0.5;
-      if (rafId) cancelAnimationFrame(rafId);
-      rafId = requestAnimationFrame(function(){
-        heroImgWrap.style.setProperty('--tx', (-cy * 6) + 'deg');
-        heroImgWrap.style.setProperty('--ty', (cx * 8) + 'deg');
-      });
-    });
-    heroImgWrap.addEventListener('mouseleave', function(){
-      heroImgWrap.style.setProperty('--tx', '0deg');
-      heroImgWrap.style.setProperty('--ty', '0deg');
     });
   }
 
